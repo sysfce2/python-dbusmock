@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Guido Günther"
 __copyright__ = """
@@ -41,15 +37,10 @@ class TestModemManagerBase(dbusmock.DBusTestCase):
 
     def setUp(self):
         super().setUp()
-        (self.p_mock, self.p_obj) = self.spawn_server_template("modemmanager", {}, stdout=subprocess.PIPE)
-
-    def tearDown(self):
-        if self.p_mock:
-            self.p_mock.stdout.close()
-            self.p_mock.terminate()
-            self.p_mock.wait()
-
-        super().tearDown()
+        self.p_mock, self.p_obj = self.spawn_server_template("modemmanager", {}, stdout=subprocess.PIPE)
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
 
     def get_property(self, name):
         return self.p_obj.Get(self.dbus_interface, name, dbus_interface=dbus.PROPERTIES_IFACE)

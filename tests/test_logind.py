@@ -1,15 +1,13 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
 (c) 2013 Canonical Ltd.
-(c) 2017 - 2022 Martin Pitt <martin@piware.de>
+(c) 2017 - 2025 Martin Pitt <martin@piware.de>
 """
 
+import fcntl
+import os
 import re
 import shutil
 import subprocess
@@ -41,16 +39,15 @@ class TestLogind(dbusmock.DBusTestCase):
             cls.version = re.search(r"(\d+)", out.splitlines()[0]).group(1)
 
     def setUp(self):
-        self.p_mock = None
+        self.p_mock, self.obj_logind = self.spawn_server_template("logind", {}, stdout=subprocess.PIPE)
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
 
-    def tearDown(self):
-        if self.p_mock:
-            self.p_mock.stdout.close()
-            self.p_mock.terminate()
-            self.p_mock.wait()
+        flags = fcntl.fcntl(self.p_mock.stdout, fcntl.F_GETFL)
+        fcntl.fcntl(self.p_mock.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
     def test_empty(self):
-        (self.p_mock, _) = self.spawn_server_template("logind", {}, stdout=subprocess.PIPE)
         cmd = ["loginctl"]
         if self.version >= "209":
             cmd.append("--no-legend")
@@ -64,9 +61,7 @@ class TestLogind(dbusmock.DBusTestCase):
         self.assertEqual(out, "")
 
     def test_session(self):
-        (self.p_mock, obj_logind) = self.spawn_server_template("logind", {}, stdout=subprocess.PIPE)
-
-        obj_logind.AddSession("c1", "seat0", 500, "joe", True)
+        self.obj_logind.AddSession("c1", "seat0", 500, "joe", True)
 
         out = subprocess.check_output(["loginctl", "list-seats"], text=True)
         self.assertRegex(out, r"(^|\n)seat0\s+")
@@ -112,16 +107,13 @@ class TestLogind(dbusmock.DBusTestCase):
         self.assertRegex(out, "LockedHint=yes")
 
     def test_properties(self):
-        (self.p_mock, obj_logind) = self.spawn_server_template("logind", {}, stdout=subprocess.PIPE)
-        props = obj_logind.GetAll("org.freedesktop.login1.Manager", interface=dbus.PROPERTIES_IFACE)
+        props = self.obj_logind.GetAll("org.freedesktop.login1.Manager", interface=dbus.PROPERTIES_IFACE)
         self.assertEqual(props["PreparingForSleep"], False)
         self.assertEqual(props["IdleSinceHint"], 0)
 
     def test_inhibit(self):
-        (self.p_mock, obj_logind) = self.spawn_server_template("logind", {}, stdout=subprocess.PIPE)
-
         # what, who, why, mode
-        fd = obj_logind.Inhibit("suspend", "testcode", "purpose", "delay")
+        fd = self.obj_logind.Inhibit("suspend", "testcode", "purpose", "delay")
 
         # Our inhibitor is held
         out = subprocess.check_output(["systemd-inhibit"], text=True)
@@ -135,6 +127,17 @@ class TestLogind(dbusmock.DBusTestCase):
         # No inhibitor is held
         out = subprocess.check_output(["systemd-inhibit"], text=True)
         self.assertRegex(out, "No inhibitors|0 inhibitors listed")
+
+    def test_suspend(self):
+        p_mock_polkit, _obj_polkitd = self.spawn_server_template("polkitd", {}, stdout=subprocess.DEVNULL)
+        self.addCleanup(p_mock_polkit.wait)
+        self.addCleanup(p_mock_polkit.terminate)
+
+        subprocess.check_call(["systemctl", "suspend"])
+
+        log = self.p_mock.stdout.read().decode()
+        self.assertIn('SetWallMessage "" True', log)
+        self.assertIn("Suspend True", log)
 
 
 if __name__ == "__main__":

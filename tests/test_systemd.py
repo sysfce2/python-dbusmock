@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Jonas Ådahl"
 __copyright__ = """
@@ -33,15 +29,6 @@ class TestSystemd(dbusmock.DBusTestCase):
         cls.session_bus = cls.get_dbus(False)
         cls.system_bus = cls.get_dbus(True)
 
-    def setUp(self):
-        self.p_mock = None
-
-    def tearDown(self):
-        if self.p_mock:
-            self.p_mock.stdout.close()
-            self.p_mock.terminate()
-            self.p_mock.wait()
-
     def _assert_unit_property(self, unit_obj, name, expect):
         value = unit_obj.Get("org.freedesktop.systemd1.Unit", name)
         self.assertEqual(str(value), expect)
@@ -49,7 +36,10 @@ class TestSystemd(dbusmock.DBusTestCase):
     def _test_base(self, bus, system_bus=True):
         dummy_service = "dummy-dbusmock.service"
 
-        (self.p_mock, obj_systemd) = self.spawn_server_template("systemd", {}, subprocess.PIPE, system_bus=system_bus)
+        p_mock, obj_systemd = self.spawn_server_template("systemd", {}, subprocess.PIPE, system_bus=system_bus)
+        self.addCleanup(p_mock.wait)
+        self.addCleanup(p_mock.terminate)
+        self.addCleanup(p_mock.stdout.close)
 
         systemd_mock = dbus.Interface(obj_systemd, dbusmock.MOCK_IFACE)
         systemd_mock.AddMockUnit(dummy_service)
@@ -91,11 +81,6 @@ class TestSystemd(dbusmock.DBusTestCase):
 
         wait_for_job(job_path)
         self._assert_unit_property(unit_obj, "ActiveState", "inactive")
-
-        self.p_mock.stdout.close()
-        self.p_mock.terminate()
-        self.p_mock.wait()
-        self.p_mock = None
 
     def test_user(self):
         self._test_base(self.session_bus, system_bus=False)

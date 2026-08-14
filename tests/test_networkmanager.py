@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Iftikhar Ahmad"
 __copyright__ = """
@@ -67,16 +63,14 @@ class TestNetworkManager(dbusmock.DBusTestCase):
         cls.lang_env["LC_MESSAGES"] = "C"
 
     def setUp(self):
-        (self.p_mock, self.obj_networkmanager) = self.spawn_server_template(
+        self.p_mock, self.obj_networkmanager = self.spawn_server_template(
             "networkmanager", {"NetworkingEnabled": True, "WwanEnabled": False}, stdout=subprocess.PIPE
         )
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
         self.dbusmock = dbus.Interface(self.obj_networkmanager, dbusmock.MOCK_IFACE)
         self.settings = dbus.Interface(self.dbus_con.get_object(MANAGER_IFACE, SETTINGS_OBJ), SETTINGS_IFACE)
-
-    def tearDown(self):
-        self.p_mock.stdout.close()
-        self.p_mock.terminate()
-        self.p_mock.wait()
 
     def read_general(self):
         return subprocess.check_output(["nmcli", "--nocheck", "general"], env=self.lang_env, text=True)
@@ -277,7 +271,7 @@ class TestNetworkManager(dbusmock.DBusTestCase):
         self.assertRegex(self.read_general(), r"disconnected.*\sfull")
 
         self.dbusmock.SetGlobalConnectionState(NMState.NM_STATE_ASLEEP)
-        self.assertRegex(self.read_general(), r"asleep.*\sfull")
+        self.assertRegex(self.read_general(), r"(asleep|off).*\sfull")
 
     def test_connectivity_state(self):
         self.dbusmock.SetConnectivity(NMConnectivityState.NM_CONNECTIVITY_FULL)

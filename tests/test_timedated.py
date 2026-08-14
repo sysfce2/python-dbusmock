@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Iain Lane"
 __copyright__ = """
@@ -35,14 +31,11 @@ class TestTimedated(dbusmock.DBusTestCase):
         cls.dbus_con = cls.get_dbus(True)
 
     def setUp(self):
-        (self.p_mock, _) = self.spawn_server_template("timedated", {}, stdout=subprocess.PIPE)
+        self.p_mock, _ = self.spawn_server_template("timedated", {}, stdout=subprocess.PIPE)
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
         self.obj_timedated = self.dbus_con.get_object("org.freedesktop.timedate1", "/org/freedesktop/timedate1")
-
-    def tearDown(self):
-        if self.p_mock:
-            self.p_mock.stdout.close()
-            self.p_mock.terminate()
-            self.p_mock.wait()
 
     def run_timedatectl(self):
         return subprocess.check_output(["timedatectl"], text=True)

@@ -1,10 +1,6 @@
 """Mock D-Bus objects for test suites."""
 
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
@@ -28,7 +24,7 @@ import dbus
 import dbus.service
 
 # we do not use this ourselves, but mock methods often want to use this
-os  # pyflakes pylint: disable=pointless-statement  # noqa: B018
+os  # pyflakes pylint: disable=pointless-statement  # ruff: ignore[useless-expression]
 
 # global path -> DBusMockObject mapping
 objects: Dict[str, "DBusMockObject"] = {}
@@ -234,7 +230,7 @@ class DBusMockObject(dbus.service.Object):  # pylint: disable=too-many-instance-
         self._template_parameters: Optional[PropsType] = None
 
         # pylint: disable=consider-using-with
-        self.logfile = open(logfile, "wb") if logfile else None  # noqa: SIM115
+        self.logfile = open(logfile, "wb") if logfile else None  # ruff: ignore[open-file-with-context-handler]
         self.is_logfile_owner = True
         self.call_log: List[CallLogType] = []
         self.mock_data = mock_data
@@ -497,7 +493,7 @@ class DBusMockObject(dbus.service.Object):  # pylint: disable=too-many-instance-
         # because inspect cannot handle those, so pass on interface and method
         # name as first positional arguments
         # pylint: disable=unnecessary-lambda-assignment
-        method = lambda self, *args, **kwargs: DBusMockObject.mock_method(  # noqa: E731
+        method = lambda self, *args, **kwargs: DBusMockObject.mock_method(  # ruff: ignore[lambda-assignment]
             self, interface, name, in_sig, *args, **kwargs
         )
 

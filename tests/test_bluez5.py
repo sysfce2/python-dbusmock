@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Philip Withnall"
 __copyright__ = """
@@ -98,7 +94,10 @@ class TestBlueZ5(dbusmock.DBusTestCase):
     def setUpClass(cls):
         cls.start_system_bus()
         cls.dbus_con = cls.get_dbus(True)
-        (cls.p_mock, cls.obj_bluez) = cls.spawn_server_template("bluez5", {}, stdout=subprocess.PIPE)
+        cls.p_mock, cls.obj_bluez = cls.spawn_server_template("bluez5", {}, stdout=subprocess.PIPE)
+        cls.addClassCleanup(cls.p_mock.wait)
+        cls.addClassCleanup(cls.p_mock.terminate)
+        cls.addClassCleanup(cls.p_mock.stdout.close)
 
         out = _run_bluetoothctl("version")
         version = next(line.split(" ")[-1] for line in out if line.startswith("Version"))
@@ -580,22 +579,19 @@ class TestBlueZObex(dbusmock.DBusTestCase):
 
     def setUp(self):
         # bluetoothd
-        (self.p_mock, self.obj_bluez) = self.spawn_server_template("bluez5", {}, stdout=subprocess.PIPE)
+        self.p_mock, self.obj_bluez = self.spawn_server_template("bluez5", {}, stdout=subprocess.PIPE)
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
         self.dbusmock_bluez = dbus.Interface(self.obj_bluez, "org.bluez.Mock")
 
         # obexd
-        (self.p_mock_obex, self.obj_obex) = self.spawn_server_template("bluez5-obex", {}, stdout=subprocess.PIPE)
+        self.p_mock_obex, self.obj_obex = self.spawn_server_template("bluez5-obex", {}, stdout=subprocess.PIPE)
+        self.addCleanup(self.p_mock_obex.wait)
+        self.addCleanup(self.p_mock_obex.terminate)
+        self.addCleanup(self.p_mock_obex.stdout.close)
         self.dbusmock = dbus.Interface(self.obj_obex, dbusmock.MOCK_IFACE)
         self.dbusmock_obex = dbus.Interface(self.obj_obex, "org.bluez.obex.Mock")
-
-    def tearDown(self):
-        self.p_mock.stdout.close()
-        self.p_mock.terminate()
-        self.p_mock.wait()
-
-        self.p_mock_obex.stdout.close()
-        self.p_mock_obex.terminate()
-        self.p_mock_obex.wait()
 
     def test_everything(self):
         # Set up an adapter and device.

@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
@@ -40,7 +36,7 @@ class TestUPower(dbusmock.DBusTestCase):
         cls.dbus_con = cls.get_dbus(True)
 
     def setUp(self):
-        (self.p_mock, self.obj_upower) = self.spawn_server_template(
+        self.p_mock, self.obj_upower = self.spawn_server_template(
             "upower",
             {
                 "OnBattery": True,
@@ -49,15 +45,13 @@ class TestUPower(dbusmock.DBusTestCase):
             },
             stdout=subprocess.PIPE,
         )
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
         # set log to nonblocking
         flags = fcntl.fcntl(self.p_mock.stdout, fcntl.F_GETFL)
         fcntl.fcntl(self.p_mock.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         self.dbusmock = dbus.Interface(self.obj_upower, dbusmock.MOCK_IFACE)
-
-    def tearDown(self):
-        self.p_mock.stdout.close()
-        self.p_mock.terminate()
-        self.p_mock.wait()
 
     def test_no_devices(self):
         out = subprocess.check_output(["upower", "--dump"], text=True)

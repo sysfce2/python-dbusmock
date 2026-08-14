@@ -8,11 +8,7 @@ such as 'OnLowBattery' or the return value of 'SuspendAllowed',
 This provides the 1.0 D-Bus API of upower.
 """
 
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
@@ -196,7 +192,7 @@ def AddChargingBattery(self, device_name, model_name, percentage, seconds_to_ful
 @dbus.service.method(MOCK_IFACE, in_signature="uuddddxxbsu", out_signature="")
 def SetupDisplayDevice(
     self,
-    _type,  # noqa: RUF052, RUF100 (access to local dummy variable); but this is API now
+    _type,
     state,
     percentage,
     energy,

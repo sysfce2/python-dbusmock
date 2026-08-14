@@ -1,10 +1,6 @@
 """unittest.TestCase convenience methods for DBusMocks"""
 
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
@@ -117,8 +113,7 @@ class PrivateDBus:
         self._servicedir.mkdir(parents=True)
 
         self._config = self._servicedir / f"dbusmock_{self.bustype.value}_cfg"
-        self._config.write_text(
-            f"""<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+        self._config.write_text(f"""<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
      "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
     <busconfig>
       <type>{self.bustype.value}</type>
@@ -132,10 +127,9 @@ class PrivateDBus:
         <allow own="*"/>
       </policy>
     </busconfig>
-    """
-        )
+    """)
 
-    def __enter__(self) -> "PrivateDBus":
+    def __enter__(self):
         # Allow for start() to be called manually even before the `with`
         if self._daemon is None:
             self.start()
@@ -380,7 +374,7 @@ class DBusTestCase(unittest.TestCase):
         This is a legacy method kept for backwards compatibility,
         use SpawnedMock.spawn_with_template() instead.
         """
-        if system_bus is not None:  # noqa: SIM108
+        if system_bus is not None:  # ruff: ignore[if-else-block-instead-of-if-exp]
             bustype = BusType.SYSTEM if system_bus else BusType.SESSION
         else:
             bustype = None
@@ -439,7 +433,7 @@ class SpawnedMock:
         """The D-Bus object this server was spawned for"""
         return self._obj
 
-    def __enter__(self) -> "SpawnedMock":
+    def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -550,7 +544,7 @@ class SpawnedMock:
 
         is_object_manager = module.IS_OBJECT_MANAGER if hasattr(module, "IS_OBJECT_MANAGER") else False
 
-        if is_object_manager and not hasattr(module, "MAIN_IFACE"):  # noqa: SIM108
+        if is_object_manager and not hasattr(module, "MAIN_IFACE"):  # ruff: ignore[if-else-block-instead-of-if-exp]
             interface_name = OBJECT_MANAGER_IFACE
         else:
             interface_name = module.MAIN_IFACE

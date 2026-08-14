@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
@@ -33,7 +29,10 @@ class TestOfono(dbusmock.DBusTestCase):
     def setUpClass(cls):
         cls.start_system_bus()
         cls.dbus_con = cls.get_dbus(True)
-        (cls.p_mock, cls.obj_ofono) = cls.spawn_server_template("ofono", {}, stdout=subprocess.PIPE)
+        cls.p_mock, cls.obj_ofono = cls.spawn_server_template("ofono", {}, stdout=subprocess.PIPE)
+        cls.addClassCleanup(cls.p_mock.wait)
+        cls.addClassCleanup(cls.p_mock.terminate)
+        cls.addClassCleanup(cls.p_mock.stdout.close)
 
     def setUp(self):
         self.obj_ofono.Reset()

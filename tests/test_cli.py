@@ -1,8 +1,4 @@
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU Lesser General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.  See http://www.gnu.org/copyleft/lgpl.html for the full text
-# of the license.
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 __author__ = "Martin Pitt"
 __copyright__ = """
@@ -31,6 +27,8 @@ have_gdbus = shutil.which("gdbus")
 class TestCLI(dbusmock.DBusTestCase):
     """Test running dbusmock from the command line"""
 
+    p_mock = None
+
     @classmethod
     def setUpClass(cls):
         cls.start_system_bus()
@@ -38,24 +36,14 @@ class TestCLI(dbusmock.DBusTestCase):
         cls.system_con = cls.get_dbus(True)
         cls.session_con = cls.get_dbus()
 
-    def setUp(self):
-        self.p_mock = None
-
-    def tearDown(self):
-        if self.p_mock:
-            if self.p_mock.stdout:
-                self.p_mock.stdout.close()
-            if self.p_mock.stderr:
-                self.p_mock.stdout.close()
-            self.p_mock.terminate()
-            self.p_mock.wait()
-            self.p_mock = None
-
     def start_mock(self, args, wait_name, wait_path, wait_system=False):
         # pylint: disable=consider-using-with
         self.p_mock = subprocess.Popen(
             [sys.executable, "-m", "dbusmock", *args], stdout=subprocess.PIPE, universal_newlines=True
         )
+        self.addCleanup(self.p_mock.wait)
+        self.addCleanup(self.p_mock.terminate)
+        self.addCleanup(self.p_mock.stdout.close)
         self.wait_for_bus_object(wait_name, wait_path, wait_system)
 
     def start_mock_process(self, args):
@@ -170,8 +158,7 @@ class TestCLI(dbusmock.DBusTestCase):
 
     def test_template_local(self):
         with tempfile.NamedTemporaryFile(prefix="answer_", suffix=".py") as my_template:
-            my_template.write(
-                b"""import dbus
+            my_template.write(b"""import dbus
 BUS_NAME = 'universe.Ultimate'
 MAIN_OBJ = '/'
 MAIN_IFACE = 'universe.Ultimate'
@@ -179,8 +166,7 @@ SYSTEM_BUS = False
 
 def load(mock, parameters):
     mock.AddMethods(MAIN_IFACE, [('Answer', '', 'i', 'ret = 42')])
-"""
-            )
+""")
             my_template.flush()
             # template specifies session bus
             self.start_mock(["-t", my_template.name], "universe.Ultimate", "/", False)
@@ -191,8 +177,7 @@ def load(mock, parameters):
 
     def test_template_override_system(self):
         with tempfile.NamedTemporaryFile(prefix="answer_", suffix=".py") as my_template:
-            my_template.write(
-                b"""import dbus
+            my_template.write(b"""import dbus
 BUS_NAME = 'universe.Ultimate'
 MAIN_OBJ = '/'
 MAIN_IFACE = 'universe.Ultimate'
@@ -200,8 +185,7 @@ SYSTEM_BUS = False
 
 def load(mock, parameters):
     mock.AddMethods(MAIN_IFACE, [('Answer', '', 'i', 'ret = 42')])
-"""
-            )
+""")
             my_template.flush()
             # template specifies session bus, but CLI overrides to system
             self.start_mock(["--system", "-t", my_template.name], "universe.Ultimate", "/", True)
@@ -229,7 +213,7 @@ def load(mock, parameters):
             stderr=subprocess.PIPE,
             universal_newlines=True,
         ) as p:
-            (out, err) = p.communicate()
+            out, err = p.communicate()
             self.assertEqual(out, "")
             self.assertIn("must specify NAME", err)
             self.assertNotEqual(p.returncode, 0)
@@ -241,7 +225,7 @@ def load(mock, parameters):
             stderr=subprocess.PIPE,
             universal_newlines=True,
         ) as p:
-            (out, err) = p.communicate()
+            out, err = p.communicate()
             self.assertEqual(err, "")
             self.assertIn("INTERFACE", out)
             self.assertIn("--system", out)
